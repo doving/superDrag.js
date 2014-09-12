@@ -9,13 +9,20 @@
 			padding: 0;
 		}
 		body{
+			padding: 10px;
 			font-family: "微软雅黑";
 		}
-		div{
+		.box{
+			position: relative;
+			border: solid 4px green;
+			height: 120px;
+			width: 670px;
+			margin: 10px;
+		}
+		.div{
 			position: absolute;
 			height: 100px;
 			width: 100px;
-			border: solid red 1px;
 			cursor: default;
 			font-size: 30px;
 			line-height: 100px;
@@ -55,20 +62,36 @@
 			top: 10px;
 			left: 560px;
 		}
+		.test{
+			border: solid 4px red;
+			height: 100px;
+			margin: 10px;
+		}
 	</style>
 
 </head>
 <body>
-	<div class="div1">1</div>
-	<div class="div2">2</div>
-	<div class="div3">3</div>
-	<div class="div4">4</div>
-	<div class="div5">5</div>
-	<div class="div6">6</div>
+	<div class="test"></div>
+	<div class="box">
+		<div class="div div1">1</div>
+		<div class="div div2">2</div>
+		<div class="div div3">3</div>
+		<div class="div div4">4</div>
+		<div class="div div5">5</div>
+		<div class="div div6">6</div>
+	</div>
+	<div class="box">
+		<div class="div div1">1</div>
+		<div class="div div2">2</div>
+		<div class="div div3">3</div>
+		<div class="div div4">4</div>
+		<div class="div div5">5</div>
+		<div class="div div6">6</div>
+	</div>
 	<script src="jquery-1.11.1.js"></script>
 	<script src="../superDrag.js"></script>
 	<script>
-		$("div").superDrag();
+		$(".div").superDrag().superDrag();
 	</script>
 </body>
 </html>

@@ -1,108 +1,172 @@
 (function(){
 	var superDrag = function($){
-		$.fn.superDrag = function(options){
-			var $self = this;
-			var _left = function($e){
-				return  parseInt($e.css("left"));
-			}
-			var _top = function($e){
-				return  parseInt($e.css("top"));
-			}
-			var _x = function($e){
-				return _left($e) + $e.outerWidth()/2;
-			}
-			var _y = function($e){
-				return _top($e) + $e.outerHeight()/2;
-			}
-			var _target = function($e){
-				var x = _x($e);
-				var y = _y($e);
-				var target = null;
-				$self.each(function(){
+		var SD = function($){
+			this.$      = $.css("position","absolute");
+			this.ex     = 0;
+			this.ey     = 0;
+			this.z      = $.css("z-index");
+			this.drag   = false;
+			this.target = null;
+			this.left   = SD.getLeft($);
+			this.top    = SD.getTop($);
+
+			var offset  = $.offset();
+			this.x = offset.left;
+			this.y = offset.top;
+
+			$[0].superDrag = this;
+
+			var self = this;
+			this.$.on("mousedown",function(e){
+				self.x    = e.pageX;
+				self.y    = e.pageY;
+				self.drag = true;
+				self.$.css("z-index",1);
+			});
+		}
+
+		SD.getLeft = function($){
+			return  parseInt($.css("left"));
+		}
+		SD.getTop = function($){
+			return  parseInt($.css("top"));
+		}
+		SD.getX = function($){
+			return $.offset().left;
+		}
+		SD.getY = function($){
+			return $.offset().top;
+		}
+
+		$.extend(SD.prototype,{
+			getLeft: function(){
+				return SD.getLeft(this.$);
+			},
+			getTop: function(){
+				return SD.getTop(this.$);
+			},
+			getX: function(){
+				return SD.getX(this.$);
+			},
+			getY: function(){
+				return SD.getY(this.$);
+			},
+			getTarget: function($$){
+				var x = this.getX(),
+					y = this.getY(),
+					target = null,
+					self = this;
+
+				$$.each(function(){
 					var $this = $(this);
-					if($e[0] === $this[0])return true;
-					var dw = $this.outerWidth()/2;
-						dh = $this.outerHeight()/2;
-					target = Math.abs(_x($this) - x) <= dw && Math.abs(_y($this) - y) <= dh ? $this : null;
-					if(target)return false;
-				});
-				return target;
-			}
-			this.each(function(){
-				var superDrag = false;
-				var x, y, left ,top;
-				var $this   = $(this),
-					$target = null;		
-				var z = $this.css("z-index");
-
-				$this.css("position","absolute").on("mousedown",function(e){
-					left = _left($this) + "px", 
-					top  = _top($this) + "px",
-					superDrag = true;
-					x = e.pageX;
-					y = e.pageY;
-					$this.css("z-index",1);
-				})
-
-				$(document).on("mouseup",function(){
-					if(superDrag){
-						if($target){
-							console.log($target.text());
-							var l = _left($target) + "px",
-								t = _top($target) + "px";
-							$this.animate({
-								left : l,
-								top  : t
-							},200,function(){
-								$this.css("z-index",z);
-							});
-							$target.animate({
-								left : left,
-								top  : top
-							},200);
-							left = l;
-							top  = t;
-							$target.css("box-shadow","");
-							$target = null;
-						}else{
-							$this.animate({
-								left : left,
-								top  : top
-							},200,function(){
-								$this.css("z-index",z);
-							});
-						}
-						superDrag = false;
+					if(self.$[0] !== $this[0]){
+						var dw = $this.outerWidth()/2,
+							dh = $this.outerHeight()/2;
+						target = Math.abs(SD.getX($this) - x) <= dw && Math.abs(SD.getY($this) - y) <= dh ? $this : null;
+						if(target)return false;
 					}
-					
-				}).on("mousemove",function(e){	
-					if(superDrag){
-						var offsetX = e.pageX - x;
-						var offsetY = e.pageY - y;
-						x = e.pageX;
-						y = e.pageY;
-						$this.css({
-							left : _left($this) + offsetX + "px",
-							top  : _top($this) + offsetY + "px"
-						});
+				});
 
-						var target = _target($this);
-						if(target){
-							if($target){
-								if(target[0] !== $target[0]){
-									$target.css("box-shadow","");
-									target.css("box-shadow","0 0 10px red");
-								}
-							}else{
+				return target;
+			},
+			move: function($$,e){
+				if(this.drag){
+					var x = e.pageX,
+						y = e.pageY,
+						offsetX = x - this.ex,
+						offsetY = y - this.ey;
+
+					this.ex = x;
+					this.ey = y;
+
+					this.$.css({
+						left : this.getLeft() + offsetX ,
+						top  : this.getTop() + offsetY
+					});
+
+					var target = this.getTarget($$);
+					if(target){
+						if(this.target){
+							if(target[0] !== this.target[0]){
+								this.target.css("box-shadow","");
 								target.css("box-shadow","0 0 10px red");
 							}
 						}else{
-							if($target)$target.css("box-shadow","");
+							target.css("box-shadow","0 0 10px red");
 						}
-						$target = target;
+					}else{
+						if(this.target)this.target.css("box-shadow","");
 					}
+					this.target = target;
+				}
+			},
+			exchange: function(){
+				var $$ = this.target;
+				var p1 = this.$.offset(),
+					p2 = $$.offset(),
+					l1 = this.$[0].SDleft,
+					t1 = this.$[0].SDtop,
+					l2 = $$[0].SDleft,
+					t2 = $$[0].SDtop;
+
+				this.$.css({
+					left  : this.getLeft() + p2.left - p1.left,
+					top   : this.getTop() + p2.top - p1.top
+				});
+				$$.css({
+					left  : l2 + p1.left - p2.left,
+					top   : t2 + p1.top - p2.top
 				});
 
+				var $next = this.$.next();
+				var $parent = this.$.parent();
+				$$.after(this.$);
+				$next[0] ? $next.before($$) : $parent.append($$);
+
+				var self = this;
+				this.$.animate({
+					left : l2,
+					top  : t2
+				},200,function(){
+					self.$.css("z-index",self.z);
+				});
+				$$.animate({
+					left : l1,
+					top  : t1
+				},200);
+				
+				$$.css("box-shadow","");
+				$$[0].SDleft = l1;
+				$$[0].SDtop  = t1;
+				this.$[0].SDleft = l2;
+				this.$[0].SDtop  = t2;
+				
+			},
+			stop: function(){
+				if(this.drag){
+					var self = this;
+					if(this.target){
+						this.exchange();
+					}else{
+						this.$.animate({
+							left : this.$[0].SDleft,
+							top  : this.$[0].SDtop
+						},200,function(){
+							self.$.css("z-index",self.z);
+						});
+					}
+				}
+				this.drag = false;
+			}
+		});
+
+		$.fn.superDrag = function(options){		
+			var $self = this;			
+			this.each(function(){
+				if(this.superDrag)return true;
+				var sd = new SD($(this));
+				$(document).on("mouseup",function(e){sd.stop()}).on("mousemove",function(e){sd.move($self,e)});
+				this.superDrag = true;
 			});
 			return this;
 		}
