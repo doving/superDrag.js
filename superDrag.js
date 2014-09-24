@@ -1,172 +1,204 @@
 (function(){
 	var superDrag = function($){
 		var SD = function($){
-			this.$      = $.css("position","absolute");
+			//该对象对jQuery包装DOM元素对象的引用
+			this.$      = $;
+
+			//该对象引用的DOM上发生mousedown或mousemove时鼠标的坐标
 			this.ex     = 0;
 			this.ey     = 0;
+
 			this.z      = $.css("z-index");
-			this.drag   = false;
-			this.target = null;
-			this.left   = SD.getLeft($);
-			this.top    = SD.getTop($);
+			this.position = $.css("position");
 
+			//该对象引用的DOM元素宽和高的一半
+			this.dw     = $.outerWidth()/2;
+			this.dh     = $.outerHeight()/2;
+
+			//是否可以拖动
+			this.dragable   = false;
+			
+			//是否正在和其他元素互换
+			this.exchanging = false;
+
+			//该对象引用的DOM元素相对于整个文档的坐标
 			var offset  = $.offset();
-			this.x = offset.left;
-			this.y = offset.top;
+			this.x      = offset.left;
+			this.y      = offset.top;
 
-			$[0].superDrag = this;
+			
+			//该对象引用的DOM发生动画时对循环器的引用
+			this.interval = null;
+
+			//允许互换时，对互换对象的引用
+			this.target     = null;
+
+			//DOM元素通过_superDrag属性引用该对象
+			this.$[0]._superDrag = this;
 
 			var self = this;
 			this.$.on("mousedown",function(e){
-				self.x    = e.pageX;
-				self.y    = e.pageY;
-				self.drag = true;
-				self.$.css("z-index",1);
+				//当前DOM发生mousedown时，如果已经在互换过程中则直接return
+				//否则清空该DOM中发生的animate动画
+				//记录下当前鼠标相对于文档的坐标并付给当前对象的ex和ey属性
+				//设置该对象dragable为true，表示可拖拽，设置当前DOM的z-index属性为最大，拖拽时赋予其他所选元素之上
+				if(self.exchanging)return;
+				self.stop();
+				self.ex    = e.pageX;
+				self.ey    = e.pageY;
+				self.dragable  = true;
+				self.$.css("z-index",SD.maxZ);
 			});
 		}
 
-		SD.getLeft = function($){
-			return  parseInt($.css("left"));
-		}
-		SD.getTop = function($){
-			return  parseInt($.css("top"));
-		}
-		SD.getX = function($){
-			return $.offset().left;
-		}
-		SD.getY = function($){
-			return $.offset().top;
-		}
-
-		$.extend(SD.prototype,{
-			getLeft: function(){
-				return SD.getLeft(this.$);
+		SD.prototype = {
+			offset: function(){
+				return this.$.offset();
 			},
-			getTop: function(){
-				return SD.getTop(this.$);
-			},
-			getX: function(){
-				return SD.getX(this.$);
-			},
-			getY: function(){
-				return SD.getY(this.$);
-			},
+			//该DOM在拖拽过程中获取互换对象的函数
 			getTarget: function($$){
-				var x = this.getX(),
-					y = this.getY(),
+				var offset = this.offset();
+				var x      = offset.left,
+					y      = offset.top,
 					target = null,
-					self = this;
+					self   = this;
 
 				$$.each(function(){
-					var $this = $(this);
-					if(self.$[0] !== $this[0]){
-						var dw = $this.outerWidth()/2,
-							dh = $this.outerHeight()/2;
-						target = Math.abs(SD.getX($this) - x) <= dw && Math.abs(SD.getY($this) - y) <= dh ? $this : null;
-						if(target)return false;
-					}
+					var sd = this._superDrag;
+					//如果该sd对象正处于互换过程中则continue
+					if(sd.exchanging)return true;
+					//横坐标距离小于该DOM的width一半，纵坐标距离小于该DOM的height一半，则该DOM的superDrag包装对象被选为互换对象
+					self !== sd && Math.abs(sd.x - x) <= sd.dw && Math.abs(sd.y - y) <= sd.dh && (target = sd);
+					//如果选出一个target互换对象则break
+					if(target)return false;
 				});
 
 				return target;
 			},
-			move: function($$,e){
-				if(this.drag){
-					var x = e.pageX,
-						y = e.pageY,
-						offsetX = x - this.ex,
-						offsetY = y - this.ey;
-
-					this.ex = x;
-					this.ey = y;
-
-					this.$.css({
-						left : this.getLeft() + offsetX ,
-						top  : this.getTop() + offsetY
+			//document中鼠标移动时触发的函数
+			mousemove: function($$,e){
+				if(this.dragable){
+					var offset = this.offset();
+					this.$.offset({
+						left : offset.left + e.pageX - this.ex,
+						top  : offset.top + e.pageY - this.ey
 					});
+
+					this.ex = e.pageX;
+					this.ey = e.pageY;
 
 					var target = this.getTarget($$);
 					if(target){
 						if(this.target){
-							if(target[0] !== this.target[0]){
-								this.target.css("box-shadow","");
-								target.css("box-shadow","0 0 10px red");
+							if(target !== this.target){
+								this.target.$.css("box-shadow","");
+								target.$.css("box-shadow","0 0 10px red");
 							}
 						}else{
-							target.css("box-shadow","0 0 10px red");
+							target.$.css("box-shadow","0 0 10px red");
 						}
 					}else{
-						if(this.target)this.target.css("box-shadow","");
+						this.target && this.target.$.css("box-shadow","");
 					}
 					this.target = target;
 				}
 			},
-			exchange: function(){
-				var $$ = this.target;
-				var p1 = this.$.offset(),
-					p2 = $$.offset(),
-					l1 = this.$[0].SDleft,
-					t1 = this.$[0].SDtop,
-					l2 = $$[0].SDleft,
-					t2 = $$[0].SDtop;
+			//该对象引用的DOM发生动画的函数
+			animate: function(offset,duration,callback){
+				this.stop();
+				var n    = 1,
+					step = 13,
+					time = parseInt(duration/step);
 
-				this.$.css({
-					left  : this.getLeft() + p2.left - p1.left,
-					top   : this.getTop() + p2.top - p1.top
-				});
-				$$.css({
-					left  : l2 + p1.left - p2.left,
-					top   : t2 + p1.top - p2.top
-				});
-
-				var $next = this.$.next();
-				var $parent = this.$.parent();
-				$$.after(this.$);
-				$next[0] ? $next.before($$) : $parent.append($$);
+				var of = this.offset();
+				var x  = (offset.left - of.left)/time,
+					y  = (offset.top - of.top)/time;
+				
+				if(x == 0 && y == 0)return;
 
 				var self = this;
-				this.$.animate({
-					left : l2,
-					top  : t2
-				},200,function(){
-					self.$.css("z-index",self.z);
-				});
-				$$.animate({
-					left : l1,
-					top  : t1
-				},200);
 				
-				$$.css("box-shadow","");
-				$$[0].SDleft = l1;
-				$$[0].SDtop  = t1;
-				this.$[0].SDleft = l2;
-				this.$[0].SDtop  = t2;
-				
-			},
-			stop: function(){
-				if(this.drag){
-					var self = this;
-					if(this.target){
-						this.exchange();
+				this.interval = setInterval(function(){		
+					//动画完成后清空interval对象及属性
+					//设置exchange为false表示不在互换过程中	
+					//恢复DOM之前的z-index属性
+					//将当前对象作为this关键字传递给回调函数		
+					if(n > time){
+						self.stop();
+						self.exchanging = false;
+						self.$.css("z-index",self.z);
+						callback && callback.call(self);
 					}else{
-						this.$.animate({
-							left : this.$[0].SDleft,
-							top  : this.$[0].SDtop
-						},200,function(){
-							self.$.css("z-index",self.z);
-						});
+						self.$.offset({left: of.left + x*n, top:of.top + y*n});
 					}
-				}
-				this.drag = false;
+					n++;
+				},step);
+			},
+			//该对象引用的DOM与其他DOM发生互换时的函数
+			exchange: function(){
+				var target = this.target;
+
+				//设置当前对象和互换对象的exchange属性为true
+				this.exchanging = target.exchanging = true;
+
+				//互换当前对象和互换对象的x、y和position属性
+				var x = this.x, 
+					y = this.y, 
+					p = this.position;
+
+				this.x = target.x;
+				this.y = target.y;
+				this.position = target.position;
+				target.x = x;
+				target.y = y;
+				target.position = p;
+
+				//目标对象发生动画
+				target.animate({left: target.x, top: target.y},400);
+
+				//当前对象发生动画
+				this.animate({left: this.x, top: this.y},400,function(){
+					//动画完成时互换当前对象引用DOM和目标对象引用DOM的节点位置
+					var $next = this.$.next(),
+					$parent = this.$.parent();
+					target.$.after(this.$);
+					$next[0] ? $next.before(target.$) : $parent.append(target.$); 
+
+					//换完位置后将已经互换的position
+					this.$.css({"position": this.position});
+					target.$.css({"position": target.position});
+					this.$.offset({left: this.x, top: this.y});
+					target.$.offset({left: target.x, top: target.y});
+				});
+				this.target = null;
+				target.$.css("box-shadow","");
+			},
+			//在document中发生mouseup时调用的函数
+			mouseup: function(){
+				//如果可以拖拽则判断是否存在互换对象
+				//如果存在则进行互换，否则该对象引用的DOM发生animate动画回到原处
+				this.dragable && (this.target ? this.exchange() : this.animate({left: this.x, top: this.y},400));
+				this.dragable = false;
+			},
+			//清空该对象引用的DOM上发生的animate动画，并设置该对象interval属性为null
+			stop: function(){
+				this.interval && (clearInterval(this.interval), this.interval = null);
 			}
-		});
+		};
 
 		$.fn.superDrag = function(options){		
-			var $self = this;			
+			var $self = this;
+
+			//集合DOM元素中z-index值中最大的
+			SD.maxZ = 1;	
+
 			this.each(function(){
-				if(this.superDrag)return true;
+				if(this._superDrag)return true;
 				var sd = new SD($(this));
-				$(document).on("mouseup",function(e){sd.stop()}).on("mousemove",function(e){sd.move($self,e)});
-				this.superDrag = true;
+				var z = +$(this).css("z-index") || 0;
+				//获取最大z-index并加1
+				SD.maxZ = SD.maxZ > z ? SD.maxZ : z + 1;
+				$(document).on("mousemove",function(e){sd.mousemove($self,e)}).on("mouseup",function(e){sd.mouseup()});
 			});
 			return this;
 		}
