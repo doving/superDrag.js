@@ -17,10 +17,13 @@
 			border: solid 4px green;
 			height: 120px;
 			width: 670px;
-			margin: 10px;
+			margin: 10px
 		}
 		.div{
-			position: absolute;
+			float: left;
+			margin-left: 10px;
+			margin-top: 10px;
+			display: inline;
 			height: 100px;
 			width: 100px;
 			cursor: default;
@@ -46,6 +49,7 @@
 			background: green; 
 			top: 10px;
 			left: 230px;
+			z-index: 10;
 		}
 		.div4{
 			background: blue; 
@@ -62,16 +66,45 @@
 			top: 10px;
 			left: 560px;
 		}
-		.test{
-			border: solid 4px red;
-			height: 100px;
-			margin: 10px;
+		.box2 .div{
+			position: absolute;
 		}
+		.box2.div1{
+			background: red; 
+			top: 10px;
+			left: 10px;
+		}
+		.box2.div2{
+			background: orange; 
+			top: 10px;
+			left: 120px;
+		}
+		.box2.div3{
+			background: green; 
+			top: 10px;
+			left: 230px;
+			z-index: 10;
+		}
+		.box2.div4{
+			background: blue; 
+			top: 10px;
+			left: 340px;
+		}
+		.box2.div5{
+			background: deepSkyBlue; 
+			top: 10px;
+			left: 450px;
+		}
+		.box2.div6{
+			background: pink; 
+			top: 10px;
+			left: 560px;
+		}
+
 	</style>
 
 </head>
 <body>
-	<div class="test"></div>
 	<div class="box">
 		<div class="div div1">1</div>
 		<div class="div div2">2</div>
@@ -80,18 +113,20 @@
 		<div class="div div5">5</div>
 		<div class="div div6">6</div>
 	</div>
-	<div class="box">
-		<div class="div div1">1</div>
-		<div class="div div2">2</div>
-		<div class="div div3">3</div>
-		<div class="div div4">4</div>
-		<div class="div div5">5</div>
-		<div class="div div6">6</div>
+	<div class="box box2">
+		<div class="div div1">7</div>
+		<div class="div div2">8</div>
+		<div class="div div3">9</div>
+		<div class="div div4">10</div>
+		<div class="div div5">11</div>
+		<div class="div div6">12</div>
 	</div>
 	<script src="jquery-1.11.1.js"></script>
 	<script src="../superDrag.js"></script>
 	<script>
-		$(".div").superDrag().superDrag();
+		//$(".box").superDrag();
+		$(".div").superDrag();
+		
 	</script>
 </body>
 </html>
